@@ -784,7 +784,7 @@ def save_md5(settings):
       for mesh in range (1, len(meshes)):
         for submesh in meshes[mesh].submeshes:
           submesh.bindtomesh(meshes[0])
-    if (md5mesh_filename != ""):
+    if (md5mesh_filename != "" and len(meshes)>0):
       try:
         file = open(md5mesh_filename, 'w')
       except IOError:
@@ -802,7 +802,7 @@ def save_md5(settings):
     md5anim_filename = settings.savepath + ".md5anim"
 
     #save animation file
-    if len(ANIMATIONS)>0:
+    if (len(ANIMATIONS)>0 and len(meshes)>0):
       anim = ANIMATIONS.popitem()[1]
       print( str( anim ) )
       try:
