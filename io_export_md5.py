@@ -50,7 +50,6 @@ def vector_crossproduct(v1, v2):
     ]
 
 def point_by_matrix(p, m):
-  #print( str(type( p )) + " " + str(type(m)) )
   return [p[0] * m.row[0][0] + p[1] * m.row[0][1] + p[2] * m.row[0][2] + m.row[0][3],
           p[0] * m.row[1][0] + p[1] * m.row[1][1] + p[2] * m.row[1][2] + m.row[1][3],
           p[0] * m.row[2][0] + p[1] * m.row[2][1] + p[2] * m.row[2][2] + m.row[2][3]]
@@ -508,14 +507,13 @@ def generateboundingbox(objects, md5animation, framerange):
     scene.frame_set( i ) 
     
     for obj in objects:
-      data = obj.data
-      if obj.type == 'MESH' and data.tessfaces:
-        (lx, ly, lz ) = obj.location
+
+      if obj.type == 'MESH' and obj.data.polygons:
         bbox = obj.bound_box
-        matrix = mathutils.Matrix([ [1.0,  0.0, 0.0, 0.0],
-                                    [0.0,  1.0, 1.0, 0.0],
-                                    [0.0,  0.0, 1.0, 0.0],
-                                    [0.0,  0.0, 0.0, 1.0] ])
+        matrix = mathutils.Matrix([ [1.0, 0.0, 0.0, 0.0],
+                                    [0.0, 1.0, 1.0, 0.0],
+                                    [0.0, 0.0, 1.0, 0.0],
+                                    [0.0, 0.0, 0.0, 1.0] ])
         
         for v in bbox:
           corners.append(point_by_matrix (v, matrix))
@@ -683,7 +681,7 @@ def save_md5(settings):
               
               if hasFaceUV: 
               	uv = [uv_textures.active.data[face.index].uv[i][0], uv_textures.active.data[face.index].uv[i][1]]
-              	uv[1] = 1.0 - uv[1]  # should we flip Y? yes, new in Blender 2.5x
+              	uv[1] = 1.0 - uv[1]  # flip Y
               	if not vertex.maps: vertex.maps.append(Map(*uv))
               	elif (vertex.maps[0].u != uv[0]) or (vertex.maps[0].v != uv[1]):
                   # This vertex can be shared for Blender, but not for MD5
@@ -720,19 +718,16 @@ def save_md5(settings):
     print( "failed to retrieve animation data for selected armature at index : " + str( thearmature ) )
     settings.exportMode = "mesh only"
   else:
-    arm_action = thearmature.animation_data.action
-    rangestart = 0
-    rangeend = 0
+
+    #export individual animations based on the active action - see http://www.katsbits.com/smforum/index.php?topic=178.msg966#msg966 for details
+    bpy.context.scene.update()
+    activeArmature = bpy.context.active_object
+    arm_action = activeArmature.animation_data.action
 
     if arm_action:
       animation = ANIMATIONS[arm_action.name] = MD5Animation(skeleton)
 
-      #export individual animations based on the active action - see http://www.katsbits.com/smforum/index.php?topic=178.msg966#msg966 for details
-      bpy.context.scene.update()
-      activeArmature = bpy.context.active_object
-      action = activeArmature.animation_data.action
-
-      framemin, framemax  = action.frame_range
+      framemin, framemax  = arm_action.frame_range
       rangestart = int(framemin)
       rangeend = int(framemax)
 
@@ -741,9 +736,9 @@ def save_md5(settings):
       while currenttime <= rangeend: 
         bpy.context.scene.frame_set(currenttime)
         time = (currenttime - 1.0) / 24.0 #(assuming default 24fps for md5 anim)
-        pose = thearmature.pose
+        pose = activeArmature.pose
 
-        for bonename in thearmature.data.bones.keys():
+        for bonename in activeArmature.data.bones.keys():
           posebonemat = mathutils.Matrix(pose.bones[bonename].matrix ) # @ivar poseMatrix: The total transformation of this PoseBone including constraints. -- different from localMatrix
 
           try:
@@ -756,7 +751,7 @@ def save_md5(settings):
             parentposemat.invert()
             posebonemat = parentposemat * posebonemat
           else:
-            posebonemat = thearmature.matrix_world * posebonemat
+            posebonemat = activeArmature.matrix_world * posebonemat
           loc = [posebonemat.translation[0],
               posebonemat.translation[1],
               posebonemat.translation[2],
@@ -808,6 +803,9 @@ def save_md5(settings):
         errmsg = "IOError " #%s: %s" % (errno, strerror)
       objects = []
       for submesh in meshes[0].submeshes:
+        if len(submesh.weights) == 0:
+          #!!!: We do miss some information that would be computed during the pre-processing stage for vertices in the pull meshes phase. Resolve this when refactoring this plugin.
+          submesh.generateweights()
         if len(submesh.weights) > 0:
           obj = None
           for sob in bpy.context.selected_objects:
