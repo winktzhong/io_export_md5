@@ -434,7 +434,10 @@ class MD5Animation:
             qx = -qx
             qy = -qy
             qz = -qz            
-        self.baseframe[bone.id]= (bone.matrix.translation[0]*scale, bone.matrix.translation[1]*scale, bone.matrix.translation[2]*scale, qx, qy, qz)
+        self.baseframe[bone.id]= (bone.matrix.translation[0]*scale, 
+                                  bone.matrix.translation[1]*scale, 
+                                  bone.matrix.translation[2]*scale, 
+                                  qx, qy, qz)
         
     buf = "MD5Version %i\n" % (self.MD5Version)
     buf = buf + "commandline \"%s\"\n\n" % (self.commandline)
@@ -518,7 +521,8 @@ def generateboundingbox(objects, md5animation, framerange):
         for v in bbox:
           corners.append(point_by_matrix (v, matrix))
     (min, max) = getminmax(corners)
-    md5animation.bounds.append((min[0]*scale, min[1]*scale, min[2]*scale, max[0]*scale, max[1]*scale, max[2]*scale))
+    md5animation.bounds.append((min[0]*scale, min[1]*scale, min[2]*scale,
+                                max[0]*scale, max[1]*scale, max[2]*scale))
   
     
 #exporter settings
@@ -645,7 +649,8 @@ def save_md5(settings):
                 
                 influences = []
                 for j in range(len( obj.data.vertices[ face.vertices[i] ].groups )):
-                  inf = [obj.vertex_groups[ obj.data.vertices[ face.vertices[i] ].groups[j].group ].name, obj.data.vertices[ face.vertices[i] ].groups[j].weight]
+                  inf = [obj.vertex_groups[ obj.data.vertices[ face.vertices[i] ].groups[j].group ].name, 
+                         obj.data.vertices[ face.vertices[i] ].groups[j].weight]
                   influences.append( inf )
                 
                 if not influences:
@@ -719,7 +724,8 @@ def save_md5(settings):
     settings.exportMode = "mesh only"
   else:
 
-    #export individual animations based on the active action - see http://www.katsbits.com/smforum/index.php?topic=178.msg966#msg966 for details
+    # Export individual animations based on the active action
+    # See http://www.katsbits.com/smforum/index.php?topic=178.msg966#msg966 for details
     bpy.context.scene.update()
     activeArmature = bpy.context.active_object
     arm_action = activeArmature.animation_data.action
@@ -739,7 +745,8 @@ def save_md5(settings):
         pose = activeArmature.pose
 
         for bonename in activeArmature.data.bones.keys():
-          posebonemat = mathutils.Matrix(pose.bones[bonename].matrix ) # @ivar poseMatrix: The total transformation of this PoseBone including constraints. -- different from localMatrix
+          # @ivar poseMatrix: The total transformation of this PoseBone including constraints. -- different from localMatrix
+          posebonemat = mathutils.Matrix(pose.bones[bonename].matrix ) 
 
           try:
             bone  = BONES[bonename] #look up md5bone
@@ -747,7 +754,8 @@ def save_md5(settings):
             print( "found a posebone animating a bone that is not part of the exported armature: " + bonename )
             continue
           if bone.parent: # need parentspace-matrix
-            parentposemat = mathutils.Matrix(pose.bones[bone.parent.name].matrix ) # @ivar poseMatrix: The total transformation of this PoseBone including constraints. -- different from localMatrix
+            # @ivar poseMatrix: The total transformation of this PoseBone including constraints. -- different from localMatrix
+            parentposemat = mathutils.Matrix(pose.bones[bone.parent.name].matrix ) 
             parentposemat.invert()
             posebonemat = parentposemat * posebonemat
           else:
@@ -804,7 +812,8 @@ def save_md5(settings):
       objects = []
       for submesh in meshes[0].submeshes:
         if len(submesh.weights) == 0:
-          #!!!: We do miss some information that would be computed during the pre-processing stage for vertices in the pull meshes phase. Resolve this when refactoring this plugin.
+          # !!!: We do miss some information that would be computed during the vert processing stage in the export meshes phase. 
+          # TODO: Resolve this when refactoring this plugin.
           submesh.generateweights()
         if len(submesh.weights) > 0:
           obj = None
