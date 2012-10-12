@@ -1,17 +1,17 @@
 #"""
-#Name: 'Quake Model 5 (.md5)...'
-#Blender: 262
+#Name: 'Export idTech4 (.md5)...'
+#Blender: 263
 #Group: 'Export'
-#Tooltip: 'Export a Quake Model 5 File'
+#Tooltip: 'Export an idTech4 File'
 #
 #credit to der_ton for the 2.4x Blender export script
 #"""
 
 bl_info = { # changed from bl_addon_info in 2.57 -mikshaw
     "name": "Export idTech4 (.md5)",
-    "author": "Paul Zirkle aka Keless, credit to der_ton, with changes for Blender 2.62+ by Nicholas Levin",
+    "author": "Paul Zirkle aka Keless, credit to der_ton, with changes for Blender 2.63+ by Nicholas Levin",
     "version": (1,0,2),
-    "blender": (2, 6, 2),
+    "blender": (2, 6, 3),
     "api": 31847,
     "location": "File > Export > Skeletal Mesh/Animation Data (.md5mesh/.md5anim)",
     "description": "Export idTech4 (.md5)",
@@ -34,14 +34,14 @@ def vector_crossproduct(v1, v2):
 
 def point_by_matrix(p, m):
   #print( str(type( p )) + " " + str(type(m)) )
-  return [p[0] * m[0][0] + p[1] * m[0][1] + p[2] * m[0][2] + m[0][3],
-          p[0] * m[1][0] + p[1] * m[1][1] + p[2] * m[1][2] + m[1][3],
-          p[0] * m[2][0] + p[1] * m[2][1] + p[2] * m[2][2] + m[2][3]]
+  return [p[0] * m.row[0][0] + p[1] * m.row[0][1] + p[2] * m.row[0][2] + m.row[0][3],
+          p[0] * m.row[1][0] + p[1] * m.row[1][1] + p[2] * m.row[1][2] + m.row[1][3],
+          p[0] * m.row[2][0] + p[1] * m.row[2][1] + p[2] * m.row[2][2] + m.row[2][3]]
 
 def vector_by_matrix(p, m):
-  return [p[0] * m[0][0] + p[1] * m[0][1] + p[2] * m[0][2],
-          p[0] * m[1][0] + p[1] * m[1][1] + p[2] * m[1][2],
-          p[0] * m[2][0] + p[1] * m[2][1] + p[2] * m[2][2]]
+  return [p[0] * m.row[0][0] + p[1] * m.row[0][1] + p[2] * m.row[0][2],
+          p[0] * m.row[1][0] + p[1] * m.row[1][1] + p[2] * m.row[1][2],
+          p[0] * m.row[2][0] + p[1] * m.row[2][1] + p[2] * m.row[2][2]]
 
 def vector_normalize(v):
   l = math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
@@ -53,50 +53,50 @@ def vector_normalize(v):
 def matrix2quaternion(m):
   s = math.sqrt(abs(m[0][0] + m[1][1] + m[2][2] + m[3][3]))
   if s == 0.0:
-    x = abs(m[1][2] - m[2][1])
-    y = abs(m[2][0] - m[0][2])
-    z = abs(m[0][1] - m[1][0])
+    x = abs(m.row[1][2] - m.row[2][1])
+    y = abs(m.row[2][0] - m.row[0][2])
+    z = abs(m.row[0][1] - m.row[1][0])
     if   (x >= y) and (x >= z): return 1.0, 0.0, 0.0, 0.0
     elif (y >= x) and (y >= z): return 0.0, 1.0, 0.0, 0.0
     else:                       return 0.0, 0.0, 1.0, 0.0
   return quaternion_normalize([
-    -(m[1][2] - m[2][1]) / (2.0 * s),
-    -(m[2][0] - m[0][2]) / (2.0 * s),
-    -(m[0][1] - m[1][0]) / (2.0 * s),
+    -(m.row[1][2] - m.row[2][1]) / (2.0 * s),
+    -(m.row[2][0] - m.row[0][2]) / (2.0 * s),
+    -(m.row[0][1] - m.row[1][0]) / (2.0 * s),
     0.5 * s,
     ])
     
 def matrix_invert(m):
-  det = (m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
-       - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
-       + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]))
+  det = (m.row[0][0] * (m.row[1][1] * m.row[2][2] - m.row[1][2] * m.row[2][1])
+       - m.row[0][1] * (m.row[1][0] * m.row[2][2] - m.row[1][2] * m.row[2][0])
+       + m.row[0][2] * (m.row[1][0] * m.row[2][1] - m.row[1][1] * m.row[2][0]))
   if det == 0.0: return None
   det = 1.0 / det
-  r = [ [
-      det * (m[1][1] * m[2][2] - m[1][2] * m[2][1]),
-    - det * (m[0][1] * m[2][2] - m[0][2] * m[2][1]),
-      det * (m[0][1] * m[1][2] - m[0][2] * m[1][1]),
+  r = mathutils.Matrix([ [
+      det * (m.row[1][1] * m.row[2][2] - m.row[1][2] * m.row[2][1]),
+    - det * (m.row[0][1] * m.row[2][2] - m.row[0][2] * m.row[2][1]),
+      det * (m.row[0][1] * m.row[1][2] - m.row[0][2] * m.row[1][1]),
       0.0,
     ], [
-    - det * (m[1][0] * m[2][2] - m[1][2] * m[2][0]),
-      det * (m[0][0] * m[2][2] - m[0][2] * m[2][0]),
-    - det * (m[0][0] * m[1][2] - m[0][2] * m[1][0]),
+    - det * (m.row[1][0] * m.row[2][2] - m.row[1][2] * m.row[2][0]),
+      det * (m.row[0][0] * m.row[2][2] - m.row[0][2] * m.row[2][0]),
+    - det * (m.row[0][0] * m.row[1][2] - m.row[0][2] * m.row[1][0]),
       0.0,
     ], [
-      det * (m[1][0] * m[2][1] - m[1][1] * m[2][0]),
-    - det * (m[0][0] * m[2][1] - m[0][1] * m[2][0]),
-      det * (m[0][0] * m[1][1] - m[0][1] * m[1][0]),
+      det * (m.row[1][0] * m.row[2][1] - m.row[1][1] * m.row[2][0]),
+    - det * (m.row[0][0] * m.row[2][1] - m.row[0][1] * m.row[2][0]),
+      det * (m.row[0][0] * m.row[1][1] - m.row[0][1] * m.row[1][0]),
       0.0,
     ], [
       0.0,
       0.0,
       0.0,
       1.0,
-    ] ]
+    ] ])
 
-  r[0][3] = - (m[0][3] * r[0][0] + m[1][3] * r[0][1] + m[2][3] * r[0][2])
-  r[1][3] = - (m[0][3] * r[1][0] + m[1][3] * r[1][1] + m[2][3] * r[1][2])
-  r[2][3] = - (m[0][3] * r[2][0] + m[1][3] * r[2][1] + m[2][3] * r[2][2])
+  r[0][3] = - (m.row[0][3] * r[0][0] + m.row[1][3] * r[0][1] + m.row[2][3] * r[0][2])
+  r[1][3] = - (m.row[0][3] * r[1][0] + m.row[1][3] * r[1][1] + m.row[2][3] * r[1][2])
+  r[2][3] = - (m.row[0][3] * r[2][0] + m.row[1][3] * r[2][1] + m.row[2][3] * r[2][2])
 
   return r
     
@@ -501,12 +501,11 @@ def generateboundingbox(objects, md5animation, framerange):
       if obj.type == 'MESH' and data.tessfaces:
         (lx, ly, lz ) = obj.location
         bbox = obj.bound_box
-        matrix = mathutils.Matrix()
-        matrix.col[0] = [1.0,  0.0, 0.0, 0.0]
-        matrix.col[1] = [0.0,  1.0, 0.0, 0.0]
-        matrix.col[2] = [0.0,  1.0, 1.0, 0.0]
-        matrix.col[3] = [0.0,  0.0, 0.0, 1.0]
-          
+        matrix = mathutils.Matrix([ [1.0,  0.0, 0.0, 0.0],
+                                    [0.0,  1.0, 1.0, 0.0],
+                                    [0.0,  0.0, 1.0, 0.0],
+                                    [0.0,  0.0, 0.0, 1.0] ])
+        
         for v in bbox:
           corners.append(point_by_matrix (v, matrix))
     (min, max) = getminmax(corners)
@@ -813,7 +812,7 @@ def save_md5(settings):
 #export class registration and interface
 from bpy.props import *
 class ExportMD5(bpy.types.Operator):
-  '''Export to Quake Model 5 (.md5)'''
+  '''Export to idTech4 (.md5)'''
   bl_idname = "export.md5"
   bl_label = 'Export MD5'
   
@@ -862,7 +861,7 @@ class ExportMD5(bpy.types.Operator):
 
 def menu_func(self, context):
   default_path = os.path.splitext(bpy.data.filepath)[0]
-  self.layout.operator(ExportMD5.bl_idname, text="Quake Model 5 (.md5)", icon='BLENDER').filepath = default_path
+  self.layout.operator(ExportMD5.bl_idname, text="idTech4 (.md5)", icon='BLENDER').filepath = default_path
   
 def register():
   bpy.utils.register_module(__name__)  #mikshaw
