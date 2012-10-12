@@ -721,7 +721,7 @@ def save_md5(settings):
 
   if not hasattr(thearmature, 'animation_data'):
     print( "failed to retrieve animation data for selected armature at index : " + str( thearmature ) )
-    settings.exportMode = "mesh only"
+  
   else:
 
     # Export individual animations based on the active action
