@@ -420,7 +420,7 @@ class MD5Animation:
             qx = -qx
             qy = -qy
             qz = -qz            
-        self.baseframe[bone.id]= (bone.pmatrix[3][0]*scale, bone.pmatrix[3][1]*scale, bone.pmatrix[3][2]*scale, qx, qy, qz)
+        self.baseframe[bone.id]= (bone.pmatrix.translation[0]*scale, bone.pmatrix.translation[1]*scale, bone.pmatrix.translation[2]*scale, qx, qy, qz)
         
     buf = "MD5Version %i\n" % (self.MD5Version)
     buf = buf + "commandline \"%s\"\n\n" % (self.commandline)
@@ -744,9 +744,9 @@ def save_md5(settings):
             posebonemat = parentposemat * posebonemat # mikshaw
           else:
             posebonemat = thearmature.matrix_world * posebonemat  #reverse order of multiplication!!!
-          loc = [posebonemat[3][0],
-              posebonemat[3][1],
-              posebonemat[3][2],
+          loc = [posebonemat.translation[0],
+              posebonemat.translation[1],
+              posebonemat.translation[2],
               ]
 #          rot = posebonemat.to_quat().normalize()
           rot = posebonemat.to_quaternion() # changed from to_quat in 2.57 -mikshaw
