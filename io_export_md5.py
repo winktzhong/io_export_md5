@@ -712,7 +712,7 @@ def save_md5(settings):
   ANIMATIONS = {}
 
   if not hasattr(thearmature, 'animation_data'):
-    print( "failed to retrieve animation data for object : " + str( thearmature ) )
+    print( "failed to retrieve animation data for selected armature at index : " + str( thearmature ) )
     settings.exportMode = "mesh only"
   else:
     arm_action = thearmature.animation_data.action
