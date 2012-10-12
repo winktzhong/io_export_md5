@@ -4,21 +4,19 @@
 #Group: 'Export'
 #Tooltip: 'Export an idTech4 File'
 #
-#credit to der_ton for the 2.4x Blender export script
+#Credit to der_ton for the original 2.4x Blender export script
 #"""
 
-bl_info = { # changed from bl_addon_info in 2.57 -mikshaw
+bl_info = {
     "name": "Export idTech4 (.md5)",
-    "author": "Paul Zirkle aka Keless, credit to der_ton, with changes for Blender 2.63+ by Nicholas Levin",
+    "author": "Keless, der_ton, nglevin",
     "version": (1,0,2),
     "blender": (2, 6, 3),
     "api": 31847,
     "location": "File > Export > Skeletal Mesh/Animation Data (.md5mesh/.md5anim)",
     "description": "Export idTech4 (.md5)",
     "warning": "",
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.5/Py/"\
-        "Scripts/File_I-O/idTech4_md5",
-    "tracker_url": "http://www.katsbits.com",
+    "tracker_url": "https://github.com/nglevin/io_export_md5/issues",
     "category": "Import/Export"}
 
 import bpy,struct,math,os,time,sys,mathutils
@@ -132,7 +130,6 @@ class Mesh:
     buf = ""
     for submesh in self.submeshes:
       buf=buf + "mesh {\n"
-#      buf=buf + "mesh {\n\t// meshes: " + submesh.name + "\n"  # used for Sauerbraten -mikshaw
       meshnumber += 1
       buf=buf + submesh.to_md5mesh()
       buf=buf + "}\n\n"
@@ -360,14 +357,9 @@ class Bone:
     
     pos1, pos2, pos3 = self.matrix.translation[0], self.matrix.translation[1], self.matrix.translation[2]
     buf=buf+"( %f %f %f ) " % (pos1*scale, pos2*scale, pos3*scale)
-    #qx, qy, qz, qw = matrix2quaternion(self.matrix)
-    #if qw<0:
-    #    qx = -qx
-    #    qy = -qy
-    #    qz = -qz
+
     m = self.matrix
-#    bquat = self.matrix.to_quat()  #changed from matrix.toQuat() in blender 2.4x script
-    bquat = self.matrix.to_quaternion()  #changed from to_quat in 2.57 -mikshaw
+    bquat = self.matrix.to_quaternion()
     bquat.normalize()
     qx = bquat.x
     qy = bquat.y
@@ -537,7 +529,7 @@ def save_md5(settings):
   thearmature = 0  #null to start, will assign in next section 
   
   #first pass on selected data, pull one skeleton
-  skeleton = Skeleton(10, "Exported from Blender by io_export_md5.py by Paul Zirkle")
+  skeleton = Skeleton(10, "Exported from Blender by nglevin's io_export_md5.py fork")
   bpy.context.scene.frame_set(bpy.context.scene.frame_start)
   for obj in bpy.context.selected_objects:
     if obj.type == 'ARMATURE':
@@ -657,9 +649,7 @@ def save_md5(settings):
                         vertex.influences.append(Influence(BONES[bone_name], weight))
                     except:
                         continue
-                
-                #print( "vert " + str( face.vertices[i] ) + " has " + str(len( vertex.influences ) ) + " influences ")
-                        
+                                      
               elif not face.use_smooth:
                 # We cannot share vertex for non-smooth faces, since Cal3D does not
                 # support vertex sharing for 2 vertices with different normals.
@@ -719,8 +709,8 @@ def save_md5(settings):
     if arm_action:
       animation = ANIMATIONS[arm_action.name] = MD5Animation(skeleton)
 
-      rangestart = int( bpy.context.scene.frame_start ) # int( arm_action.frame_range[0] )
-      rangeend = int( bpy.context.scene.frame_end ) #int( arm_action.frame_range[1] )
+      rangestart = int( bpy.context.scene.frame_start )
+      rangeend = int( bpy.context.scene.frame_end )
       currenttime = rangestart
       while currenttime <= rangeend: 
         bpy.context.scene.frame_set(currenttime)
@@ -737,18 +727,16 @@ def save_md5(settings):
             continue
           if bone.parent: # need parentspace-matrix
             parentposemat = mathutils.Matrix(pose.bones[bone.parent.name].matrix ) # @ivar poseMatrix: The total transformation of this PoseBone including constraints. -- different from localMatrix
-#            posebonemat = parentposemat.invert() * posebonemat #reverse order of multiplication!!!
-            parentposemat.invert() # mikshaw
-            posebonemat = parentposemat * posebonemat # mikshaw
+            parentposemat.invert()
+            posebonemat = parentposemat * posebonemat
           else:
-            posebonemat = thearmature.matrix_world * posebonemat  #reverse order of multiplication!!!
+            posebonemat = thearmature.matrix_world * posebonemat
           loc = [posebonemat.translation[0],
               posebonemat.translation[1],
               posebonemat.translation[2],
               ]
-#          rot = posebonemat.to_quat().normalize()
-          rot = posebonemat.to_quaternion() # changed from to_quat in 2.57 -mikshaw
-          rot.normalize() # mikshaw
+          rot = posebonemat.to_quaternion()
+          rot.normalize()
           rot = [rot.w,rot.x,rot.y,rot.z]
           
           animation.addkeyforbone(bone.id, time, loc, rot)
@@ -786,7 +774,7 @@ def save_md5(settings):
 
     #save animation file
     if len(ANIMATIONS)>0:
-      anim = ANIMATIONS.popitem()[1] #ANIMATIONS.values()[0]
+      anim = ANIMATIONS.popitem()[1]
       print( str( anim ) )
       try:
         file = open(md5anim_filename, 'w')
@@ -819,16 +807,7 @@ class ExportMD5(bpy.types.Operator):
   logenum = [("console","Console","log to console"),
              ("append","Append","append to log file"),
              ("overwrite","Overwrite","overwrite log file")]
-             
-  #search for list of actions to export as .md5anims
-  #md5animtargets = []
-  #for anim in bpy.data.actions:
-  #	md5animtargets.append( (anim.name, anim.name, anim.name) )
-  	
-  #md5animtarget = None
-  #if( len( md5animtargets ) > 0 ):
-  #	md5animtarget = EnumProperty( name="Anim", items = md5animtargets, description = "choose animation to export", default = md5animtargets[0] )
-  	
+  
   exportModes = [("mesh & anim", "Mesh & Anim", "Export .md5mesh and .md5anim files."),
   		 ("anim only", "Anim only.", "Export .md5anim only."),
   		 ("mesh only", "Mesh only.", "Export .md5mesh only.")]
@@ -836,11 +815,7 @@ class ExportMD5(bpy.types.Operator):
   filepath = StringProperty(subtype = 'FILE_PATH',name="File Path", description="Filepath for exporting", maxlen= 1024, default= "")
   md5name = StringProperty(name="MD5 Name", description="MD3 header name / skin path (64 bytes)",maxlen=64,default="")
   md5exportList = EnumProperty(name="Exports", items=exportModes, description="Choose export mode.", default='mesh & anim')
-  #md5logtype = EnumProperty(name="Save log", items=logenum, description="File logging options",default = 'console')
   md5scale = FloatProperty(name="Scale", description="Scale all objects from world origin (0,0,0)",default=1.0,precision=5)
-  #md5offsetx = FloatProperty(name="Offset X", description="Transition scene along x axis",default=0.0,precision=5)
-  #md5offsety = FloatProperty(name="Offset Y", description="Transition scene along y axis",default=0.0,precision=5)
-  #md5offsetz = FloatProperty(name="Offset Z", description="Transition scene along z axis",default=0.0,precision=5)
   
   
 
@@ -854,8 +829,6 @@ class ExportMD5(bpy.types.Operator):
 
   def invoke(self, context, event):
         WindowManager = context.window_manager
-        # fixed for 2.56? Katsbits.com (via Nic B)
-        # original WindowManager.add_fileselect(self)
         WindowManager.fileselect_add(self)
         return {"RUNNING_MODAL"}  
 
@@ -864,11 +837,11 @@ def menu_func(self, context):
   self.layout.operator(ExportMD5.bl_idname, text="idTech4 (.md5)", icon='BLENDER').filepath = default_path
   
 def register():
-  bpy.utils.register_module(__name__)  #mikshaw
+  bpy.utils.register_module(__name__)
   bpy.types.INFO_MT_file_export.append(menu_func)
 
 def unregister():
-  bpy.utils.unregister_module(__name__)  #mikshaw
+  bpy.utils.unregister_module(__name__)
   bpy.types.INFO_MT_file_export.remove(menu_func)
 
 if __name__ == "__main__":
