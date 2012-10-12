@@ -1,6 +1,6 @@
 #"""
 #Name: 'Quake Model 5 (.md5)...'
-#Blender: 257
+#Blender: 262
 #Group: 'Export'
 #Tooltip: 'Export a Quake Model 5 File'
 #
