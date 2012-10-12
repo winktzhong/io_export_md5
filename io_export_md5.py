@@ -1,3 +1,22 @@
+# ***** BEGIN GPL LICENSE BLOCK ***** 
+# 
+# This program is free software; you can redistribute it and/or 
+# modify it under the terms of the GNU General Public License 
+# as published by the Free Software Foundation; either version 2 
+# of the License, or (at your option) any later version. 
+# 
+# This program is distributed in the hope that it will be useful, 
+# but WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+# GNU General Public License for more details. 
+# 
+# You should have received a copy of the GNU General Public License 
+# along with this program; if not, write to the Free Software Foundation, 
+# Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA. 
+# 
+# ***** END GPL LICENCE BLOCK *****
+#
+
 #"""
 #Name: 'Export idTech4 (.md5)...'
 #Blender: 263
@@ -408,7 +427,7 @@ class MD5Animation:
         currentframedataindex += 6
         self.numanimatedcomponents = currentframedataindex
       else:
-        rot=bone.pmatrix.toQuat().normalize()
+        rot=bone.matrix.to_quaternion().normalize()
         qx=rot.x
         qy=rot.y
         qz=rot.z
@@ -416,7 +435,7 @@ class MD5Animation:
             qx = -qx
             qy = -qy
             qz = -qz            
-        self.baseframe[bone.id]= (bone.pmatrix.translation[0]*scale, bone.pmatrix.translation[1]*scale, bone.pmatrix.translation[2]*scale, qx, qy, qz)
+        self.baseframe[bone.id]= (bone.matrix.translation[0]*scale, bone.matrix.translation[1]*scale, bone.matrix.translation[2]*scale, qx, qy, qz)
         
     buf = "MD5Version %i\n" % (self.MD5Version)
     buf = buf + "commandline \"%s\"\n\n" % (self.commandline)
@@ -508,14 +527,12 @@ def generateboundingbox(objects, md5animation, framerange):
 class md5Settings:
   def __init__(self,
                savepath,
-               scale,
+               scale=1.0,
                exportMode,
                ):
     self.savepath = savepath
     self.scale = scale
     self.exportMode = exportMode
-
-scale = 1.0
 
 #SERIALIZE FUNCTION
 def save_md5(settings):
@@ -706,12 +723,13 @@ def save_md5(settings):
     arm_action = thearmature.animation_data.action
     rangestart = 0
     rangeend = 0
+
     if arm_action:
       animation = ANIMATIONS[arm_action.name] = MD5Animation(skeleton)
-
       rangestart = int( bpy.context.scene.frame_start )
       rangeend = int( bpy.context.scene.frame_end )
       currenttime = rangestart
+      
       while currenttime <= rangeend: 
         bpy.context.scene.frame_set(currenttime)
         time = (currenttime - 1.0) / 24.0 #(assuming default 24fps for md5 anim)
@@ -812,7 +830,7 @@ class ExportMD5(bpy.types.Operator):
   		 ("anim only", "Anim only.", "Export .md5anim only."),
   		 ("mesh only", "Mesh only.", "Export .md5mesh only.")]
 
-  filepath = StringProperty(subtype = 'FILE_PATH',name="File Path", description="Filepath for exporting", maxlen= 1024, default= "")
+  filepath = StringProperty(subtype ='FILE_PATH', name="File Path", description="Filepath for exporting", maxlen=1024, default="")
   md5name = StringProperty(name="MD5 Name", description="MD3 header name / skin path (64 bytes)",maxlen=64,default="")
   md5exportList = EnumProperty(name="Exports", items=exportModes, description="Choose export mode.", default='mesh & anim')
   md5scale = FloatProperty(name="Scale", description="Scale all objects from world origin (0,0,0)",default=1.0,precision=5)
@@ -820,12 +838,17 @@ class ExportMD5(bpy.types.Operator):
   
 
   def execute(self, context):
-   settings = md5Settings(savepath = self.properties.filepath,
+    
+    # preserve the scale factor selected by the user
+    global scale
+    scale = self.md5scale
+
+    settings = md5Settings(savepath = self.properties.filepath,
                           scale = self.properties.md5scale,
                           exportMode = self.properties.md5exportList
                           )
-   save_md5(settings)
-   return {'FINISHED'}
+    save_md5(settings)
+    return {'FINISHED'}
 
   def invoke(self, context, event):
         WindowManager = context.window_manager
