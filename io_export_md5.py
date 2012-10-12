@@ -640,7 +640,7 @@ def save_md5(settings):
               if face.vertices[i] in vertices: 
                 vertex = vertices[  face.vertices[i] ] #type of Vertex
               if not vertex: #found unique vertex, add to list
-                coord  = point_by_matrix( verts[face.vertices[i]].co, w_matrix ) #TODO: fix possible bug here
+                coord  = point_by_matrix( verts[face.vertices[i]].co, w_matrix )
                 if face.use_smooth: normal = vector_normalize(vector_by_matrix( verts[face.vertices[i]].normal, w_matrix ))
                 vertex  = vertices[face.vertices[i]] = Vertex(submesh, coord, normal) 
                 createVertexA += 1
