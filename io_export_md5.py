@@ -542,7 +542,7 @@ def save_md5(settings):
         if (parent and not b.parent.name==parent.name):
           return #only catch direct children
         
-        mat =  mathutils.Matrix(w_matrix) * mathutils.Matrix(b.matrix_local)  #reversed order of multiplication from 2.4 to 2.5!!! ARRRGGG
+        mat =  mathutils.Matrix(w_matrix) * mathutils.Matrix(b.matrix_local)
         
         bone = Bone(skeleton, parent, b.name, mat, b)
         
