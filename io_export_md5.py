@@ -527,12 +527,12 @@ def generateboundingbox(objects, md5animation, framerange):
 class md5Settings:
   def __init__(self,
                savepath,
-               scale=1.0,
                exportMode,
+               scale=1.0,
                ):
     self.savepath = savepath
-    self.scale = scale
     self.exportMode = exportMode
+    self.scale = scale
 
 #SERIALIZE FUNCTION
 def save_md5(settings):
