@@ -726,8 +726,16 @@ def save_md5(settings):
 
     if arm_action:
       animation = ANIMATIONS[arm_action.name] = MD5Animation(skeleton)
-      rangestart = int( bpy.context.scene.frame_start )
-      rangeend = int( bpy.context.scene.frame_end )
+
+      #export individual animations based on the active action - see http://www.katsbits.com/smforum/index.php?topic=178.msg966#msg966 for details
+      bpy.context.scene.update()
+      activeArmature = bpy.context.active_object
+      action = activeArmature.animation_data.action
+
+      framemin, framemax  = action.frame_range
+      rangestart = int(framemin)
+      rangeend = int(framemax)
+
       currenttime = rangestart
       
       while currenttime <= rangeend: 
