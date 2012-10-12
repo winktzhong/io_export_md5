@@ -34,14 +34,14 @@ def vector_crossproduct(v1, v2):
 
 def point_by_matrix(p, m):
   #print( str(type( p )) + " " + str(type(m)) )
-  return [p[0] * m[0][0] + p[1] * m[1][0] + p[2] * m[2][0] + m[3][0],
-          p[0] * m[0][1] + p[1] * m[1][1] + p[2] * m[2][1] + m[3][1],
-          p[0] * m[0][2] + p[1] * m[1][2] + p[2] * m[2][2] + m[3][2]]
+  return [p[0] * m[0][0] + p[1] * m[0][1] + p[2] * m[0][2] + m[0][3],
+          p[0] * m[1][0] + p[1] * m[1][1] + p[2] * m[1][2] + m[1][3],
+          p[0] * m[2][0] + p[1] * m[2][1] + p[2] * m[2][2] + m[2][3]]
 
 def vector_by_matrix(p, m):
-  return [p[0] * m[0][0] + p[1] * m[1][0] + p[2] * m[2][0],
-          p[0] * m[0][1] + p[1] * m[1][1] + p[2] * m[2][1],
-          p[0] * m[0][2] + p[1] * m[1][2] + p[2] * m[2][2]]
+  return [p[0] * m[0][0] + p[1] * m[0][1] + p[2] * m[0][2],
+          p[0] * m[1][0] + p[1] * m[1][1] + p[2] * m[1][2],
+          p[0] * m[2][0] + p[1] * m[2][1] + p[2] * m[2][2]]
 
 def vector_normalize(v):
   l = math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
@@ -53,47 +53,51 @@ def vector_normalize(v):
 def matrix2quaternion(m):
   s = math.sqrt(abs(m[0][0] + m[1][1] + m[2][2] + m[3][3]))
   if s == 0.0:
-    x = abs(m[2][1] - m[1][2])
-    y = abs(m[0][2] - m[2][0])
-    z = abs(m[1][0] - m[0][1])
+    x = abs(m[1][2] - m[2][1])
+    y = abs(m[2][0] - m[0][2])
+    z = abs(m[0][1] - m[1][0])
     if   (x >= y) and (x >= z): return 1.0, 0.0, 0.0, 0.0
     elif (y >= x) and (y >= z): return 0.0, 1.0, 0.0, 0.0
     else:                       return 0.0, 0.0, 1.0, 0.0
   return quaternion_normalize([
-    -(m[2][1] - m[1][2]) / (2.0 * s),
-    -(m[0][2] - m[2][0]) / (2.0 * s),
-    -(m[1][0] - m[0][1]) / (2.0 * s),
+    -(m[1][2] - m[2][1]) / (2.0 * s),
+    -(m[2][0] - m[0][2]) / (2.0 * s),
+    -(m[0][1] - m[1][0]) / (2.0 * s),
     0.5 * s,
     ])
     
 def matrix_invert(m):
-  det = (m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2])
-       - m[1][0] * (m[0][1] * m[2][2] - m[2][1] * m[0][2])
-       + m[2][0] * (m[0][1] * m[1][2] - m[1][1] * m[0][2]))
+  det = (m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+       - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+       + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]))
   if det == 0.0: return None
   det = 1.0 / det
   r = [ [
-      det * (m[1][1] * m[2][2] - m[2][1] * m[1][2]),
-    - det * (m[0][1] * m[2][2] - m[2][1] * m[0][2]),
-      det * (m[0][1] * m[1][2] - m[1][1] * m[0][2]),
+      det * (m[1][1] * m[2][2] - m[1][2] * m[2][1]),
+    - det * (m[0][1] * m[2][2] - m[0][2] * m[2][1]),
+      det * (m[0][1] * m[1][2] - m[0][2] * m[1][1]),
       0.0,
     ], [
-    - det * (m[1][0] * m[2][2] - m[2][0] * m[1][2]),
-      det * (m[0][0] * m[2][2] - m[2][0] * m[0][2]),
-    - det * (m[0][0] * m[1][2] - m[1][0] * m[0][2]),
-      0.0
-    ], [
-      det * (m[1][0] * m[2][1] - m[2][0] * m[1][1]),
-    - det * (m[0][0] * m[2][1] - m[2][0] * m[0][1]),
-      det * (m[0][0] * m[1][1] - m[1][0] * m[0][1]),
+    - det * (m[1][0] * m[2][2] - m[1][2] * m[2][0]),
+      det * (m[0][0] * m[2][2] - m[0][2] * m[2][0]),
+    - det * (m[0][0] * m[1][2] - m[0][2] * m[1][0]),
       0.0,
+    ], [
+      det * (m[1][0] * m[2][1] - m[1][1] * m[2][0]),
+    - det * (m[0][0] * m[2][1] - m[0][1] * m[2][0]),
+      det * (m[0][0] * m[1][1] - m[0][1] * m[1][0]),
+      0.0,
+    ], [
+      0.0,
+      0.0,
+      0.0,
+      1.0,
     ] ]
-  r.append([
-    -(m[3][0] * r[0][0] + m[3][1] * r[1][0] + m[3][2] * r[2][0]),
-    -(m[3][0] * r[0][1] + m[3][1] * r[1][1] + m[3][2] * r[2][1]),
-    -(m[3][0] * r[0][2] + m[3][1] * r[1][2] + m[3][2] * r[2][2]),
-    1.0,
-    ])
+
+  r[0][3] = - (m[0][3] * r[0][0] + m[1][3] * r[0][1] + m[2][3] * r[0][2])
+  r[1][3] = - (m[0][3] * r[1][0] + m[1][3] * r[1][1] + m[2][3] * r[1][2])
+  r[2][3] = - (m[0][3] * r[2][0] + m[1][3] * r[2][1] + m[2][3] * r[2][2])
+  
   return r
     
 def quaternion_normalize(q):
@@ -486,28 +490,23 @@ def getminmax(listofpoints):
   return (min, max)
 
 def generateboundingbox(objects, md5animation, framerange):
-  scene = bpy.context.scene #Blender.Scene.getCurrent()
-  context = scene.render #scene.getRenderingContext()
+  scene = bpy.context.scene
+  context = scene.render
   for i in range(framerange[0], framerange[1]+1):
     corners = []
-    #context.currentFrame(i)
-    #scene.makeCurrent()
     scene.frame_set( i ) 
     
     for obj in objects:
-      data = obj.data #obj.getData()
-      #if (type(data) is Blender.Types.NMeshType) and data.tessfaces:
+      data = obj.data
       if obj.type == 'MESH' and data.tessfaces:
-        #obj.makeDisplayList()
-        #(lx, ly, lz) = obj.getLocation()
         (lx, ly, lz ) = obj.location
-        #bbox = obj.getBoundBox()
         bbox = obj.bound_box
-        matrix = [[1.0,  0.0, 0.0, 0.0],
-          [0.0,  1.0, 0.0, 0.0],
-          [0.0,  1.0, 1.0, 0.0],
-          [0.0,  0.0, 0.0, 1.0],
-          ]
+        matrix = mathutils.Matrix()
+        matrix.col[0] = [1.0,  0.0, 0.0, 0.0]
+        matrix.col[1] = [0.0,  1.0, 0.0, 0.0]
+        matrix.col[2] = [0.0,  1.0, 1.0, 0.0]
+        matrix.col[3] = [0.0,  0.0, 0.0, 1.0]
+          
         for v in bbox:
           corners.append(point_by_matrix (v, matrix))
     (min, max) = getminmax(corners)
@@ -525,7 +524,7 @@ class md5Settings:
     self.scale = scale
     self.exportMode = exportMode
 
-scale = 1.0
+scale = 10.0
 
 #SERIALIZE FUNCTION
 def save_md5(settings):
