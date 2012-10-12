@@ -97,7 +97,7 @@ def matrix_invert(m):
   r[0][3] = - (m[0][3] * r[0][0] + m[1][3] * r[0][1] + m[2][3] * r[0][2])
   r[1][3] = - (m[0][3] * r[1][0] + m[1][3] * r[1][1] + m[2][3] * r[1][2])
   r[2][3] = - (m[0][3] * r[2][0] + m[1][3] * r[2][1] + m[2][3] * r[2][2])
-  
+
   return r
     
 def quaternion_normalize(q):
@@ -524,7 +524,7 @@ class md5Settings:
     self.scale = scale
     self.exportMode = exportMode
 
-scale = 10.0
+scale = 1.0
 
 #SERIALIZE FUNCTION
 def save_md5(settings):
