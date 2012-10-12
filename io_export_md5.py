@@ -10,7 +10,7 @@
 bl_info = { # changed from bl_addon_info in 2.57 -mikshaw
     "name": "Export idTech4 (.md5)",
     "author": "Paul Zirkle aka Keless, credit to der_ton, with changes for Blender 2.62+ by Nicholas Levin",
-    "version": (1,0,0),
+    "version": (1,0,2),
     "blender": (2, 6, 2),
     "api": 31847,
     "location": "File > Export > Skeletal Mesh/Animation Data (.md5mesh/.md5anim)",
@@ -711,48 +711,51 @@ def save_md5(settings):
   # Export animations
   ANIMATIONS = {}
 
+  if not hasattr(thearmature, 'animation_data'):
+    print( "failed to retrieve animation data for object : " + str( thearmature ) )
+    settings.exportMode = "mesh only"
+  else:
+    arm_action = thearmature.animation_data.action
+    rangestart = 0
+    rangeend = 0
+    if arm_action:
+      animation = ANIMATIONS[arm_action.name] = MD5Animation(skeleton)
 
-  arm_action = thearmature.animation_data.action
-  rangestart = 0
-  rangeend = 0
-  if arm_action:
-    animation = ANIMATIONS[arm_action.name] = MD5Animation(skeleton)
+      rangestart = int( bpy.context.scene.frame_start ) # int( arm_action.frame_range[0] )
+      rangeend = int( bpy.context.scene.frame_end ) #int( arm_action.frame_range[1] )
+      currenttime = rangestart
+      while currenttime <= rangeend: 
+        bpy.context.scene.frame_set(currenttime)
+        time = (currenttime - 1.0) / 24.0 #(assuming default 24fps for md5 anim)
+        pose = thearmature.pose
 
-    rangestart = int( bpy.context.scene.frame_start ) # int( arm_action.frame_range[0] )
-    rangeend = int( bpy.context.scene.frame_end ) #int( arm_action.frame_range[1] )
-    currenttime = rangestart
-    while currenttime <= rangeend: 
-      bpy.context.scene.frame_set(currenttime)
-      time = (currenttime - 1.0) / 24.0 #(assuming default 24fps for md5 anim)
-      pose = thearmature.pose
+        for bonename in thearmature.data.bones.keys():
+          posebonemat = mathutils.Matrix(pose.bones[bonename].matrix ) # @ivar poseMatrix: The total transformation of this PoseBone including constraints. -- different from localMatrix
 
-      for bonename in thearmature.data.bones.keys():
-        posebonemat = mathutils.Matrix(pose.bones[bonename].matrix ) # @ivar poseMatrix: The total transformation of this PoseBone including constraints. -- different from localMatrix
+          try:
+            bone  = BONES[bonename] #look up md5bone
+          except:
+            print( "found a posebone animating a bone that is not part of the exported armature: " + bonename )
+            continue
+          if bone.parent: # need parentspace-matrix
+            parentposemat = mathutils.Matrix(pose.bones[bone.parent.name].matrix ) # @ivar poseMatrix: The total transformation of this PoseBone including constraints. -- different from localMatrix
+#            posebonemat = parentposemat.invert() * posebonemat #reverse order of multiplication!!!
+            parentposemat.invert() # mikshaw
+            posebonemat = parentposemat * posebonemat # mikshaw
+          else:
+            posebonemat = thearmature.matrix_world * posebonemat  #reverse order of multiplication!!!
+          loc = [posebonemat[3][0],
+              posebonemat[3][1],
+              posebonemat[3][2],
+              ]
+#          rot = posebonemat.to_quat().normalize()
+          rot = posebonemat.to_quaternion() # changed from to_quat in 2.57 -mikshaw
+          rot.normalize() # mikshaw
+          rot = [rot.w,rot.x,rot.y,rot.z]
+          
+          animation.addkeyforbone(bone.id, time, loc, rot)
+        currenttime += 1
 
-        try:
-          bone  = BONES[bonename] #look up md5bone
-        except:
-          print( "found a posebone animating a bone that is not part of the exported armature: " + bonename )
-          continue
-        if bone.parent: # need parentspace-matrix
-          parentposemat = mathutils.Matrix(pose.bones[bone.parent.name].matrix ) # @ivar poseMatrix: The total transformation of this PoseBone including constraints. -- different from localMatrix
-#          posebonemat = parentposemat.invert() * posebonemat #reverse order of multiplication!!!
-          parentposemat.invert() # mikshaw
-          posebonemat = parentposemat * posebonemat # mikshaw
-        else:
-          posebonemat = thearmature.matrix_world * posebonemat  #reverse order of multiplication!!!
-        loc = [posebonemat[3][0],
-            posebonemat[3][1],
-            posebonemat[3][2],
-            ]
-#        rot = posebonemat.to_quat().normalize()
-        rot = posebonemat.to_quaternion() # changed from to_quat in 2.57 -mikshaw
-        rot.normalize() # mikshaw
-        rot = [rot.w,rot.x,rot.y,rot.z]
-        
-        animation.addkeyforbone(bone.id, time, loc, rot)
-      currenttime += 1
-        
   # here begins md5mesh and anim output
   # this is how it works
   # first the skeleton is output, using the data that was collected by the above code in this export function
