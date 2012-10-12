@@ -354,7 +354,7 @@ class Bone:
         parentindex=self.parent.id
     buf=buf+"%i " % (parentindex)
     
-    pos1, pos2, pos3= self.matrix[3][0], self.matrix[3][1], self.matrix[3][2]
+    pos1, pos2, pos3 = self.matrix.translation[0], self.matrix.translation[1], self.matrix.translation[2]
     buf=buf+"( %f %f %f ) " % (pos1*scale, pos2*scale, pos3*scale)
     #qx, qy, qz, qw = matrix2quaternion(self.matrix)
     #if qw<0:
