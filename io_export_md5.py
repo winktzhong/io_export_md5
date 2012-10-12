@@ -143,13 +143,13 @@ class Mesh:
     self.next_submesh_id = 0
 
     
-  def to_md5mesh(self):
+  def to_md5mesh(self, scale):
     meshnumber=0
     buf = ""
     for submesh in self.submeshes:
       buf=buf + "mesh {\n"
       meshnumber += 1
-      buf=buf + submesh.to_md5mesh()
+      buf=buf + submesh.to_md5mesh(scale)
       buf=buf + "}\n\n"
 
     return buf
@@ -201,7 +201,7 @@ class SubMesh:
             return
           print('doubleface! %s %s' % (face, face2))
           
-  def to_md5mesh(self):
+  def to_md5mesh(self, scale):
     self.generateweights()
 
     self.reportdoublefaces()
@@ -231,7 +231,7 @@ class SubMesh:
     buf=buf + "\n\tnumweights %i\n" % (len(self.weights))
     weightnumber=0
     for weight in self.weights:
-      buf=buf + "\tweight %i %s\n" % (weightnumber, weight.to_md5mesh())
+      buf=buf + "\tweight %i %s\n" % (weightnumber, weight.to_md5mesh(scale))
       weightnumber += 1
       
     return buf
@@ -284,7 +284,7 @@ class Map:
     buf = "( %f %f )" % (self.u, self.v)
     return buf
 
-#NOTE: uses global 'scale' to scale the size of model verticies
+#NOTE: uses 'scale' to scale the size of model verticies
 #generated and stored in Vertex class
 class Weight:
   def __init__(self, bone, weight, vertex, weightindx, x, y, z):
@@ -295,7 +295,7 @@ class Weight:
     invbonematrix = matrix_invert(self.bone.matrix)
     self.x, self.y, self.z = point_by_matrix ((x, y, z), invbonematrix)
     
-  def to_md5mesh(self):
+  def to_md5mesh(self, scale):
     buf = "%i %f ( %f %f %f )" % (self.bone.id, self.weight, self.x*scale, self.y*scale, self.z*scale)
     return buf
 
@@ -331,14 +331,14 @@ class Skeleton:
     self.next_bone_id = 0
     
 
-  def to_md5mesh(self, numsubmeshes):
+  def to_md5mesh(self, numsubmeshes, scale):
     buf = "MD5Version %i\n" % (self.MD5Version)
     buf = buf + "commandline \"%s\"\n\n" % (self.commandline)
     buf = buf + "numJoints %i\n" % (self.next_bone_id)
     buf = buf + "numMeshes %i\n\n" % (numsubmeshes)
     buf = buf + "joints {\n"
     for bone in self.bones:
-      buf = buf + bone.to_md5mesh()
+      buf = buf + bone.to_md5mesh(scale)
     buf = buf + "}\n\n"
     return buf
 
@@ -366,7 +366,7 @@ class Bone:
     BONES[name] = self
 
 
-  def to_md5mesh(self):
+  def to_md5mesh(self, scale):
     buf= "\t\"%s\"\t" % (self.name)
     parentindex = -1
     if self.parent:
@@ -413,7 +413,7 @@ class MD5Animation:
       self.boneflags.append(0)
       self.boneframedataindex.append(0)
       
-  def to_md5anim(self):
+  def to_md5anim(self,scale):
     currentframedataindex = 0
     for bone in self.skeleton.bones:
       if (len(self.framedata[bone.id])>0):
@@ -502,7 +502,7 @@ def getminmax(listofpoints):
       if listofpoints[i][2]<min[2]: min[2]=listofpoints[i][2]
   return (min, max)
 
-def generateboundingbox(objects, md5animation, framerange):
+def generateboundingbox(objects, md5animation, framerange, scale):
   scene = bpy.context.scene
   context = scene.render
   for i in range(framerange[0], framerange[1]+1):
@@ -530,27 +530,28 @@ class md5Settings:
   def __init__(self,
                savepath,
                exportMode,
-               scale=1.0,
+               use_selection,
+               scale,
                ):
     self.savepath = savepath
     self.exportMode = exportMode
+    self.use_selection = use_selection
     self.scale = scale
 
 #SERIALIZE FUNCTION
-def save_md5(settings):
+def save_md5(settings,export_objects):
   print("Exporting selected objects...")
   bpy.ops.object.mode_set(mode='OBJECT')
   
-  scale = settings.scale
-  
-  
-  
+
   thearmature = 0  #null to start, will assign in next section 
   
   #first pass on selected data, pull one skeleton
   skeleton = Skeleton(10, "Exported from Blender by nglevin's io_export_md5.py fork")
   bpy.context.scene.frame_set(bpy.context.scene.frame_start)
-  for obj in bpy.context.selected_objects:
+
+
+  for obj in export_objects:
     if obj.type == 'ARMATURE':
       #skeleton.name = obj.name
       thearmature = obj
@@ -577,7 +578,7 @@ def save_md5(settings):
   
   #second pass on selected data, pull meshes
   meshes = []
-  for obj in bpy.context.selected_objects:
+  for obj in export_objects:
     if ((obj.type == 'MESH') and ( len(obj.data.vertices.values()) > 0 )):
       #for each non-empty mesh
       mesh = Mesh(obj.name)
@@ -789,9 +790,9 @@ def save_md5(settings):
         file = open(md5mesh_filename, 'w')
       except IOError:
         errmsg = "IOError " #%s: %s" % (errno, strerror)
-      buffer = skeleton.to_md5mesh(len(meshes[0].submeshes))
+      buffer = skeleton.to_md5mesh(len(meshes[0].submeshes),settings.scale)
       #for mesh in meshes:
-      buffer = buffer + meshes[0].to_md5mesh()
+      buffer = buffer + meshes[0].to_md5mesh(settings.scale)
       file.write(buffer)
       file.close()
       print( "saved mesh to " + md5mesh_filename )
@@ -817,12 +818,12 @@ def save_md5(settings):
           submesh.generateweights()
         if len(submesh.weights) > 0:
           obj = None
-          for sob in bpy.context.selected_objects:
+          for sob in export_objects:
               if sob and sob.type == 'MESH' and sob.name == submesh.name:
                 obj = sob
           objects.append (obj)
-      generateboundingbox(objects, anim, [rangestart, rangeend])
-      buffer = anim.to_md5anim()
+      generateboundingbox(objects, anim, [rangestart, rangeend], settings.scale)
+      buffer = anim.to_md5anim(settings.scale)
       file.write(buffer)
       file.close()
       print( "saved anim to " + md5anim_filename )
@@ -848,21 +849,27 @@ class ExportMD5(bpy.types.Operator):
   filepath = StringProperty(subtype ='FILE_PATH', name="File Path", description="Filepath for exporting", maxlen=1024, default="")
   md5name = StringProperty(name="MD5 Name", description="MD3 header name / skin path (64 bytes)",maxlen=64,default="")
   md5exportList = EnumProperty(name="Exports", items=exportModes, description="Choose export mode.", default='mesh & anim')
+  md5_use_selection = BoolProperty(name="Selected Objects", description="Export selected objects on visible layers", default=False)
   md5scale = FloatProperty(name="Scale", description="Scale all objects from world origin (0,0,0)",default=1.0,precision=5)
   
   
 
   def execute(self, context):
     
-    # preserve the scale factor selected by the user
-    global scale
-    scale = self.md5scale
-
     settings = md5Settings(savepath = self.properties.filepath,
+                          exportMode = self.properties.md5exportList,
+                          use_selection = self.properties.md5_use_selection,
                           scale = self.properties.md5scale,
-                          exportMode = self.properties.md5exportList
                           )
-    save_md5(settings)
+    
+    export_objects = []
+
+    if settings.use_selection:
+      export_objects = bpy.context.selected_objects
+    else:
+      export_objects = bpy.context.scene.objects
+
+    save_md5(settings,export_objects)
     return {'FINISHED'}
 
   def invoke(self, context, event):
