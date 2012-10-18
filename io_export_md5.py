@@ -67,7 +67,7 @@ def vector_normalize(v):
     return 1, 0, 0
 
 def matrix2quaternion(m):
-  s = math.sqrt(abs(m[0][0] + m[1][1] + m[2][2] + m[3][3]))
+  s = math.sqrt(abs(m.row[0][0] + m.row[1][1] + m.row[2][2] + m.row[3][3]))
   if s == 0.0:
     x = abs(m.row[1][2] - m.row[2][1])
     y = abs(m.row[2][0] - m.row[0][2])
